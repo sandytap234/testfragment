@@ -1,27 +1,40 @@
-import asyncio
-import os
-from aiogram import Bot, Dispatcher
-from aiogram.filters import Command
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+import uuid
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-WEB_APP_URL = os.getenv("WEB_APP_URL", "https://your-app.onrender.com")
+from db import init_db, save_user_token, get_user_token
 
-bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher()
+TOKEN = "ТОКЕН_ТЕЛЕГРАМ_БОТА"
 
-@dp.message(Command("start"))
-async def start(message: Message):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text="🔐 Войти",
-            web_app=WebAppInfo(url=WEB_APP_URL)
-        )]
-    ])
-    await message.answer("Нажмите кнопку, чтобы войти:", reply_markup=kb)
+bot = Bot(token=TOKEN)
+dp = Dispatcher(bot)
 
-async def main():
-    await dp.start_polling(bot)
+init_db()
+
+@dp.message_handler(commands=["start"])
+async def start(message: types.Message):
+    user_id = message.from_user.id
+
+    # Создаём токен
+    token = str(uuid.uuid4())
+    save_user_token(user_id, token)
+
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add(KeyboardButton("Мой профиль"))
+
+    await message.answer("Добро пожаловать!", reply_markup=keyboard)
+
+
+@dp.message_handler(lambda m: m.text == "Мой профиль")
+async def profile(message: types.Message):
+    user_id = message.from_user.id
+    token = get_user_token(user_id)
+
+    link = f"https://{YOUR_DOMAIN}/profile?token={token}"
+
+    await message.answer(f"Ваш профиль:\n{link}")
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    from aiogram import executor
+    executor.start_polling(dp)

@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: telegram-webapp
+    env: python
+    region: frankfurt # или就近
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn web.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: telegram-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: BOT_TOKEN
+        sync: false # ты задашь вручную в панели Render
+
+databases:
+  - name: telegram-db
+    databaseName: telegram_auth
+    user: telegram_user
